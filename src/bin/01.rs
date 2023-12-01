@@ -24,7 +24,27 @@ pub fn part_one(input: &str) -> Option<u32> {
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
-    None
+    let result = input
+        // You need to keep the text because some numbers connect
+        // like `eightwo` should keep both 8 and 2
+        .replace("one", "one1one")
+        .replace("two", "two2two")
+        .replace("three", "three3three")
+        .replace("four", "four4four")
+        .replace("five", "five5five")
+        .replace("six", "six6six")
+        .replace("seven", "seven7seven")
+        .replace("eight", "eight8eight")
+        .replace("nine", "nine9nine")
+        .lines()
+        .map(|l| {
+            let first = get_first_num_char(l.chars());
+            let last = get_first_num_char(l.chars().rev());
+            format!("{first}{last}").parse::<u32>().unwrap()
+        })
+        .sum();
+
+    Some(result)
 }
 
 #[cfg(test)]
