@@ -1,7 +1,26 @@
 advent_of_code::solution!(1);
 
+fn get_first_num_char(iter: impl Iterator<Item = char>) -> char {
+    for char in iter {
+        if char.is_numeric() {
+            return char;
+        }
+    }
+
+    unreachable!()
+}
+
 pub fn part_one(input: &str) -> Option<u32> {
-    None
+    let result = input
+        .lines()
+        .map(|l| {
+            let first = get_first_num_char(l.chars());
+            let last = get_first_num_char(l.chars().rev());
+            format!("{first}{last}").parse::<u32>().unwrap()
+        })
+        .sum();
+
+    Some(result)
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
