@@ -41,23 +41,36 @@ pub fn part_one(input: &str) -> Option<u32> {
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
-    let mut ids_sum = 0;
+    let mut sum = 0;
 
     for game in input.lines() {
-        let (game_id, rest) = game.split_once(": ").unwrap();
-        let id = game_id
-            .strip_prefix("Game ")
-            .unwrap()
-            .parse::<u32>()
-            .unwrap();
-
+        let (_, rest) = game.split_once(": ").unwrap();
         let sets = rest.split(';').map(|s| s.trim()).collect::<Vec<_>>();
-        if is_game_possible(&sets) {
-            ids_sum += id;
+
+        let mut max_reds = 0;
+        let mut max_green = 0;
+        let mut max_blue = 0;
+
+        for set in sets.iter() {
+            for cube in set.split(", ") {
+                let Some((number, color)) = cube.split_once(' ') else {
+                    continue;
+                };
+
+                let number = number.parse::<u32>().unwrap();
+                match color {
+                    "red" if number > max_reds => max_reds = number,
+                    "green" if number > max_green => max_green = number,
+                    "blue" if number > max_blue => max_blue = number,
+                    _ => {}
+                }
+            }
         }
+
+        sum += max_reds * max_green * max_blue;
     }
 
-    Some(ids_sum)
+    Some(sum)
 }
 
 #[cfg(test)]
