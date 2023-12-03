@@ -7,7 +7,6 @@ fn is_game_possible(sets: &[&str]) -> bool {
                 continue;
             };
 
-            dbg!(number, color);
             let number = number.parse::<u32>().unwrap();
             if (color == "red" && number > 12)
                 || (color == "green" && number > 13)
@@ -23,7 +22,7 @@ fn is_game_possible(sets: &[&str]) -> bool {
 pub fn part_one(input: &str) -> Option<u32> {
     let mut ids_sum = 0;
 
-    for game in input.lines() {
+    for game in input.trim().lines() {
         let (game_id, rest) = game.split_once(": ").unwrap();
         let id = game_id
             .strip_prefix("Game ")
@@ -43,7 +42,7 @@ pub fn part_one(input: &str) -> Option<u32> {
 pub fn part_two(input: &str) -> Option<u32> {
     let mut sum = 0;
 
-    for game in input.lines() {
+    for game in input.trim().lines() {
         let (_, rest) = game.split_once(": ").unwrap();
         let sets = rest.split(';').map(|s| s.trim()).collect::<Vec<_>>();
 

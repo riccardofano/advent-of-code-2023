@@ -60,6 +60,6 @@ mod tests {
     #[test]
     fn test_part_two() {
         let result = part_two(include_str!("../../data/examples/01-2.txt"));
-        assert_eq!(result, None);
+        assert_eq!(result, Some(281));
     }
 }
