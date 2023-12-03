@@ -1,7 +1,7 @@
 advent_of_code::solution!(3);
 
 use regex::Regex;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 type Point = (usize, usize);
 
@@ -58,8 +58,50 @@ fn part_one(input: &str) -> Option<usize> {
     Some(touching.into_iter().sum())
 }
 
-pub fn part_two(input: &str) -> Option<u32> {
-    None
+pub fn part_two(input: &str) -> Option<usize> {
+    let lines = input.trim().lines().collect::<Vec<_>>();
+
+    let re_number = Regex::new(r"\d+").unwrap();
+
+    let mut numbers: Vec<(&str, Point)> = Vec::new();
+    let mut symbols: HashSet<Point> = HashSet::new();
+
+    for (row, line) in lines.iter().enumerate() {
+        for found in re_number.find_iter(line) {
+            let number_str = found.as_str();
+            numbers.push((number_str, (found.start(), row)))
+        }
+
+        for (col, char) in line.chars().enumerate() {
+            if char == '*' {
+                symbols.insert((col, row));
+            }
+        }
+    }
+
+    let mut touching: HashMap<Point, Vec<usize>> = HashMap::new();
+    for (number, (start_x, y)) in numbers {
+        let end_x = start_x + number.len();
+
+        'number_loop: for x in start_x..end_x {
+            for neighbor in neighbors((x, y)) {
+                if let Some(symbol) = symbols.get(&neighbor) {
+                    let ratios = touching.entry(*symbol).or_default();
+                    ratios.push(number.parse().unwrap());
+
+                    break 'number_loop;
+                }
+            }
+        }
+    }
+
+    Some(
+        touching
+            .into_iter()
+            .filter(|(_, vec)| vec.len() == 2)
+            .map(|(_, vec)| vec[0] * vec[1])
+            .sum(),
+    )
 }
 
 #[cfg(test)]
@@ -75,6 +117,6 @@ mod tests {
     #[test]
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, None);
+        assert_eq!(result, Some(467835));
     }
 }
