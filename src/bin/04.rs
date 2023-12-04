@@ -39,7 +39,34 @@ pub fn part_one(input: &str) -> Option<usize> {
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
-    None
+    let winnings_per_card = input
+        .trim()
+        .lines()
+        .map(|l| {
+            let (_card_info, numbers) = l.split_once(": ").unwrap();
+
+            let (winning, have) = numbers.split_once(" | ").unwrap();
+            let winning_set = winning
+                .split_whitespace()
+                .map(|n| n.parse())
+                .collect::<Result<HashSet<usize>, _>>()
+                .unwrap();
+
+            have.split_whitespace()
+                .filter_map(|n| n.parse::<usize>().ok())
+                .filter_map(|n| winning_set.get(&n))
+                .count()
+        })
+        .collect::<Vec<usize>>();
+
+    let mut card_instances = vec![1; winnings_per_card.len()];
+    for (index, &winning_cards) in winnings_per_card.iter().enumerate() {
+        for i in 0..winning_cards {
+            card_instances[index + i + 1] += card_instances[index];
+        }
+    }
+
+    Some(card_instances.iter().sum())
 }
 
 #[cfg(test)]
@@ -55,6 +82,6 @@ mod tests {
     #[test]
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, None);
+        assert_eq!(result, Some(30));
     }
 }
