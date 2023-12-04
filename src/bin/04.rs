@@ -22,16 +22,10 @@ pub fn part_one(input: &str) -> Option<usize> {
                 .filter_map(|n| winning_set.get(&n))
                 .count();
 
-            // I'm sure there is a better way but it's coming to me right now
-            let mut sum = 0;
-            for i in 0..count {
-                if i == 0 {
-                    sum += 1;
-                } else {
-                    sum *= 2;
-                }
+            match count {
+                0 => 0,
+                n => 2_usize.pow(n as u32 - 1),
             }
-            sum
         })
         .sum();
 
