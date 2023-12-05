@@ -1,6 +1,9 @@
 advent_of_code::solution!(5);
 
-use std::{collections::HashMap, ops::Range};
+use std::{
+    collections::{BTreeSet, HashMap},
+    ops::Range,
+};
 
 fn map_range(data: &str) -> Vec<(Range<usize>, Range<usize>)> {
     data.lines()
@@ -36,6 +39,40 @@ fn number_in_available_ranges(
     }
 
     None
+}
+
+fn convert_range(
+    range: &Range<usize>,
+    map: &HashMap<Range<usize>, Range<usize>>,
+) -> Vec<Range<usize>> {
+    let mut slices = BTreeSet::new();
+
+    for source in map.keys() {
+        if range.end < source.start || range.start > source.end {
+            continue;
+        }
+
+        if source.start > range.start {
+            slices.insert(range.start);
+        }
+        if source.end < range.end {
+            slices.insert(source.end);
+        }
+    }
+
+    slices.insert(range.end);
+
+    let mut output = Vec::new();
+    let mut current = range.start;
+
+    for position in slices {
+        let length = position - current;
+        let converted_start = number_in_available_ranges(current, map).unwrap_or(current);
+        output.push(converted_start..converted_start + length);
+        current = position;
+    }
+
+    output
 }
 
 pub fn part_one(input: &str) -> Option<usize> {
@@ -75,29 +112,18 @@ pub fn part_one(input: &str) -> Option<usize> {
 pub fn part_two(input: &str) -> Option<usize> {
     let mut parts = input.trim().split("\n\n");
 
-    let seeds = parts
-        .next()
-        .unwrap()
-        .split_once(": ")
-        .unwrap()
-        .1
+    let seed_line = parts.next().expect("No seed section");
+    let (_, seeds) = seed_line.split_once(": ").expect("No seed header");
+    let seeds = seeds
         .split_whitespace()
-        .map(|n| n.parse().unwrap())
-        .collect::<Vec<usize>>();
+        .map(str::parse)
+        .collect::<Result<Vec<usize>, _>>()
+        .expect("Not all seeds were numbers");
 
-    let mut seed_ranges = Vec::new();
-    let mut i = 0;
-    while i < seeds.len() {
-        seed_ranges.push(seeds[i]..seeds[i] + seeds[i + 1]);
-        i += 2;
-    }
-
-    let mut seeds = Vec::new();
-    for range in seed_ranges.iter() {
-        for i in range.start..range.end {
-            seeds.push(i);
-        }
-    }
+    let seed_ranges = seeds
+        .chunks(2)
+        .map(|chunk| chunk[0]..chunk[0] + chunk[1])
+        .collect::<Vec<Range<usize>>>();
 
     let maps = parts
         .map(|p| {
@@ -108,16 +134,18 @@ pub fn part_two(input: &str) -> Option<usize> {
         })
         .collect::<Vec<_>>();
 
-    let result = seeds
-        .iter()
-        .map(|&s| {
-            maps.iter().fold(s, |res, map| {
-                number_in_available_ranges(res, map).unwrap_or(res)
-            })
-        })
-        .min();
+    let mut valid_ranges = seed_ranges;
+    let mut transformed_ranges = Vec::new();
 
-    result
+    for map in maps {
+        for range in valid_ranges {
+            transformed_ranges.extend(convert_range(&range, &map))
+        }
+        valid_ranges = transformed_ranges;
+        transformed_ranges = Vec::new();
+    }
+
+    valid_ranges.iter().map(|range| range.start).min()
 }
 
 #[cfg(test)]
