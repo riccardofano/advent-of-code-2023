@@ -5,7 +5,7 @@ advent_of_code::solution!(7);
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 enum Card {
-    Placeholder, // This is here so nothing else is zero so I can set the jack to zero in part two
+    _Placeholder, // This is here so nothing else is zero so I can set the jack to zero in part two
     Two,
     Three,
     Four,
@@ -67,27 +67,20 @@ enum HandKind {
 }
 
 impl HandKind {
-    fn from_part_one(cards: &[Card]) -> Self {
-        let map: HashMap<Card, usize> = cards.iter().fold(HashMap::new(), |mut map, curr| {
-            *map.entry(*curr).or_insert(0) += 1;
-            map
-        });
-
-        Self::match_entries(&map)
-    }
-
-    fn from_part_two(cards: &[Card]) -> Self {
+    fn from(cards: &[Card], is_part_two: bool) -> Self {
         let mut map: HashMap<Card, usize> = cards.iter().fold(HashMap::new(), |mut map, curr| {
             *map.entry(*curr).or_insert(0) += 1;
             map
         });
 
-        if let Some(jacks) = map.remove(&Card::Jack) {
-            let (card, _) = map
-                .iter()
-                .max_by(|a, b| a.1.cmp(b.1))
-                .unwrap_or((&Card::Ace, &0));
-            *map.entry(*card).or_insert(0) += jacks;
+        if is_part_two {
+            if let Some(jacks) = map.remove(&Card::Jack) {
+                let (card, _) = map
+                    .iter()
+                    .max_by(|a, b| a.1.cmp(b.1))
+                    .unwrap_or((&Card::Ace, &0));
+                *map.entry(*card).or_insert(0) += jacks;
+            }
         }
 
         Self::match_entries(&map)
@@ -120,7 +113,6 @@ impl HandKind {
 #[derive(Debug)]
 struct Hand {
     kind: HandKind,
-    cards: Vec<Card>,
     card_order: Vec<u8>,
     bid: usize,
 }
@@ -129,33 +121,30 @@ impl Hand {
     fn parse(line: &str, is_part_two: bool) -> Self {
         let (cards, bid) = line.split_once(' ').unwrap();
         let cards = cards.chars().map(Card::from).collect::<Vec<Card>>();
-
-        let (kind, card_order) = if is_part_two {
-            (
-                HandKind::from_part_two(cards.deref()),
-                cards.iter().map(|c| c.order_part_two()).collect::<Vec<_>>(),
-            )
-        } else {
-            (
-                HandKind::from_part_one(cards.deref()),
-                cards.iter().map(|c| c.order()).collect::<Vec<_>>(),
-            )
-        };
+        let kind = HandKind::from(cards.deref(), is_part_two);
+        let card_order = Hand::order_cards(&cards, is_part_two);
 
         Self {
             kind,
-            cards,
             card_order,
             bid: bid.parse().unwrap(),
         }
     }
+
+    fn order_cards(cards: &[Card], is_part_two: bool) -> Vec<u8> {
+        if is_part_two {
+            cards.iter().map(|c| c.order_part_two()).collect::<Vec<_>>()
+        } else {
+            cards.iter().map(|c| c.order()).collect::<Vec<_>>()
+        }
+    }
 }
 
-pub fn part_one(input: &str) -> Option<usize> {
+fn solve(input: &str, is_part_two: bool) -> Option<usize> {
     let mut hands = input
         .trim()
         .lines()
-        .map(|l| Hand::parse(l, false))
+        .map(|l| Hand::parse(l, is_part_two))
         .collect::<Vec<Hand>>();
 
     hands.sort_by(|a, b| {
@@ -176,29 +165,12 @@ pub fn part_one(input: &str) -> Option<usize> {
     Some(result)
 }
 
+pub fn part_one(input: &str) -> Option<usize> {
+    solve(input, false)
+}
+
 pub fn part_two(input: &str) -> Option<usize> {
-    let mut hands = input
-        .trim()
-        .lines()
-        .map(|l| Hand::parse(l, true))
-        .collect::<Vec<Hand>>();
-
-    hands.sort_by(|a, b| {
-        match a.kind.cmp(&b.kind) {
-            core::cmp::Ordering::Equal => {}
-            ord => return ord,
-        }
-        b.card_order.cmp(&a.card_order)
-    });
-
-    let result: usize = hands
-        .iter()
-        .rev()
-        .enumerate()
-        .map(|(i, hand)| (i + 1) * hand.bid)
-        .sum();
-
-    Some(result)
+    solve(input, true)
 }
 
 #[cfg(test)]
