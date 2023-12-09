@@ -37,8 +37,21 @@ pub fn part_one(input: &str) -> Option<isize> {
     Some(result)
 }
 
-pub fn part_two(input: &str) -> Option<u32> {
-    None
+pub fn part_two(input: &str) -> Option<isize> {
+    let result: isize = input
+        .trim()
+        .lines()
+        .map(|l| {
+            l.split_whitespace()
+                .rev()
+                .map(str::parse)
+                .collect::<Result<Vec<isize>, _>>()
+                .unwrap()
+        })
+        .map(|nums| recurse(&nums))
+        .sum();
+
+    Some(result)
 }
 
 #[cfg(test)]
@@ -53,7 +66,7 @@ mod tests {
 
     #[test]
     fn test_part_two() {
-        let result = part_two(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, None);
+        let result = part_two("10 13 16 21 30 45");
+        assert_eq!(result, Some(5));
     }
 }
