@@ -1,9 +1,9 @@
 advent_of_code::solution!(8);
 
-use std::{
-    cmp::{max, min},
-    collections::HashMap,
-};
+use std::cmp::{max, min};
+use std::collections::HashMap;
+
+use regex::Regex;
 
 fn gcd(a: usize, b: usize) -> usize {
     match ((a, b), (a & 1, b & 1)) {
@@ -40,18 +40,11 @@ impl<'a> Map<'a> {
             })
             .collect::<Vec<usize>>();
 
+        let re = Regex::new(r"(\w+) = \((\w+), (\w+)\)").unwrap();
         let graph = nodes
             .lines()
-            .map(|l| {
-                let (node, connections) = l.split_once(" = ").unwrap();
-                let (left, right) = connections
-                    .strip_prefix('(')
-                    .unwrap()
-                    .strip_suffix(')')
-                    .unwrap()
-                    .split_once(", ")
-                    .unwrap();
-
+            .map(|line| {
+                let (_, [node, left, right]) = re.captures(line).unwrap().extract();
                 (node, [left, right])
             })
             .collect::<HashMap<&str, [&str; 2]>>();
