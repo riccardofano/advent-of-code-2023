@@ -3,7 +3,11 @@ advent_of_code::solution!(8);
 use std::cmp::{max, min};
 use std::collections::HashMap;
 
-use regex::Regex;
+use winnow::ascii::{alphanumeric1, line_ending};
+use winnow::combinator::{delimited, iterator, opt, repeat, separated_pair, terminated};
+use winnow::stream::AsChar;
+use winnow::token::{any, take_till};
+use winnow::{PResult, Parser};
 
 fn gcd(a: usize, b: usize) -> usize {
     match ((a, b), (a & 1, b & 1)) {
@@ -23,32 +27,58 @@ fn lcm(a: usize, b: usize) -> usize {
     a * b / gcd(a, b)
 }
 
+type NodeMap<'a> = HashMap<&'a str, [&'a str; 2]>;
+type NodeElem<'a> = (&'a str, [&'a str; 2]);
+
 struct Map<'a> {
     directions: Vec<usize>,
-    graph: HashMap<&'a str, [&'a str; 2]>,
+    graph: NodeMap<'a>,
+}
+
+fn parse_sections<'a>(input: &mut &'a str) -> PResult<(Vec<usize>, NodeMap<'a>)> {
+    separated_pair(parse_directions, "\n\n", parse_nodes).parse_next(input)
+}
+
+fn parse_direction(input: &mut &str) -> PResult<usize> {
+    any.map(|c| match c {
+        'L' => 0,
+        'R' => 1,
+        _ => panic!("Expected to only get L or R, got: {c:?}"),
+    })
+    .parse_next(input)
+}
+
+fn parse_directions(input: &mut &str) -> PResult<Vec<usize>> {
+    let mut directions = take_till(1.., AsChar::is_newline).parse_next(input)?;
+    repeat(1.., parse_direction).parse_next(&mut directions)
+}
+
+fn parse_left_right<'a>(input: &mut &'a str) -> PResult<[&'a str; 2]> {
+    delimited('(', separated_pair(alphanumeric1, ", ", alphanumeric1), ')')
+        .map(|(l, r)| [l, r])
+        .parse_next(input)
+}
+
+fn parse_node<'a>(input: &mut &'a str) -> PResult<NodeElem<'a>> {
+    terminated(
+        separated_pair(alphanumeric1, " = ", parse_left_right),
+        opt(line_ending),
+    )
+    .parse_next(input)
+}
+
+fn parse_nodes<'a>(input: &mut &'a str) -> PResult<NodeMap<'a>> {
+    let mut it = iterator(*input, parse_node);
+    let parsed = it.collect::<HashMap<_, _>>();
+
+    it.finish()?;
+
+    Ok(parsed)
 }
 
 impl<'a> Map<'a> {
-    fn parse(input: &'a str) -> Self {
-        let (directions, nodes) = input.trim().split_once("\n\n").unwrap();
-        let directions = directions
-            .chars()
-            .map(|c| match c {
-                'L' => 0,
-                'R' => 1,
-                _ => unreachable!("There should only be L and R"),
-            })
-            .collect::<Vec<usize>>();
-
-        let re = Regex::new(r"(\w+) = \((\w+), (\w+)\)").unwrap();
-        let graph = nodes
-            .lines()
-            .map(|line| {
-                let (_, [node, left, right]) = re.captures(line).unwrap().extract();
-                (node, [left, right])
-            })
-            .collect::<HashMap<&str, [&str; 2]>>();
-
+    fn parse(mut input: &'a str) -> Self {
+        let (directions, graph) = parse_sections.parse_next(&mut input).unwrap();
         Self { directions, graph }
     }
 }
@@ -101,6 +131,37 @@ pub fn part_two(input: &str) -> Option<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_parsing_direction() {
+        assert_eq!(parse_direction(&mut "L"), Ok(0))
+    }
+
+    #[test]
+    fn test_parsing_directions() {
+        assert_eq!(parse_directions(&mut "LR\n"), Ok(vec![0, 1]))
+    }
+
+    #[test]
+    fn test_parsing_left_right() {
+        assert_eq!(parse_left_right(&mut "(AAA, ZZZ)"), Ok(["AAA", "ZZZ"]))
+    }
+
+    #[test]
+    fn test_parsing_node() {
+        assert_eq!(
+            parse_node(&mut "CCC = (AAA, ZZZ)"),
+            Ok(("CCC", ["AAA", "ZZZ"]))
+        )
+    }
+
+    #[test]
+    fn test_parsing_nodes() {
+        let mut input = "AAA = (BBB, CCC)\nBBB = (DDD, EEE)";
+        let expected = HashMap::from([("AAA", ["BBB", "CCC"]), ("BBB", ["DDD", "EEE"])]);
+
+        assert_eq!(parse_nodes(&mut input), Ok(expected))
+    }
 
     #[test]
     fn test_part_one() {
