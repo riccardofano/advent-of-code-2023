@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 advent_of_code::solution!(10);
 
 fn build_grid(input: &str) -> Vec<Vec<char>> {
@@ -55,7 +57,7 @@ fn pipe_connections(
     }
 }
 
-fn count_pipes(start: (usize, usize), grid: &[Vec<char>]) -> usize {
+fn find_loop_pipes(start: (usize, usize), grid: &[Vec<char>]) -> Vec<(usize, usize)> {
     let mut current = start;
 
     for neighbor in neighbors(start, grid) {
@@ -84,19 +86,60 @@ fn count_pipes(start: (usize, usize), grid: &[Vec<char>]) -> usize {
         current = next;
     }
 
-    pipes.len()
+    pipes
 }
 
 pub fn part_one(input: &str) -> Option<usize> {
     let grid = build_grid(input);
     let start = find_start(&grid);
 
-    let pipes = count_pipes(start, &grid);
-    Some(pipes / 2)
+    let pipes = find_loop_pipes(start, &grid);
+    Some(pipes.len() / 2)
 }
 
-pub fn part_two(input: &str) -> Option<u32> {
-    None
+fn count_inner_tiles(
+    grid: &[Vec<char>],
+    pipes: HashSet<(usize, usize)>,
+    first_pipe: (usize, usize),
+    last_pipe: (usize, usize),
+) -> usize {
+    let mut inner_tiles = 0;
+
+    for y in 0..grid.len() {
+        let mut outside = true;
+
+        for x in 0..grid[0].len() {
+            if let Some(pos) = pipes.get(&(x, y)) {
+                let to_find = (x, y + 1);
+
+                // We don't know what the shape of the starting tile is so just
+                // get the connections it's attached to
+                let contains_prev_pos = match pipe_connections(*pos, grid) {
+                    Some((conn_1, conn_2)) => conn_1 == to_find || conn_2 == to_find,
+                    None => first_pipe == to_find || last_pipe == to_find,
+                };
+
+                if contains_prev_pos {
+                    outside = !outside;
+                }
+            } else if !outside {
+                inner_tiles += 1;
+            }
+        }
+    }
+
+    inner_tiles
+}
+
+pub fn part_two(input: &str) -> Option<usize> {
+    let grid = build_grid(input);
+    let start = find_start(&grid);
+    let pipes = find_loop_pipes(start, &grid);
+    let (first_pipe, last_pipe) = (pipes[1], pipes[pipes.len() - 1]);
+
+    let pipes_set: HashSet<(usize, usize)> = pipes.into_iter().collect();
+
+    Some(count_inner_tiles(&grid, pipes_set, first_pipe, last_pipe))
 }
 
 #[cfg(test)]
@@ -118,8 +161,18 @@ mod tests {
     }
 
     #[test]
-    fn test_part_two() {
-        let result = part_two(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, None);
+    fn test_part_two_one() {
+        let result = part_two(&advent_of_code::template::read_file_part(
+            "examples", DAY, 3,
+        ));
+        assert_eq!(result, Some(4));
+    }
+
+    #[test]
+    fn test_part_two_two() {
+        let result = part_two(&advent_of_code::template::read_file_part(
+            "examples", DAY, 4,
+        ));
+        assert_eq!(result, Some(10));
     }
 }
