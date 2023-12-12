@@ -13,6 +13,14 @@ fn parse_line(line: &str) -> (&str, Vec<usize>) {
     (pattern, gear_lengths)
 }
 
+fn unfold_line(line: &str) -> String {
+    let (pattern, gear_lengths) = line.split_once(' ').unwrap();
+    let pattern = [pattern; 5].join("?");
+    let gear_lengths = [gear_lengths; 5].join(",");
+
+    format!("{pattern} {gear_lengths}")
+}
+
 fn recurse(pattern: &str, gear_lengths: &[usize], cache: &mut HashMap<String, usize>) -> usize {
     let key = format!(
         "{pattern} {}",
@@ -97,7 +105,18 @@ pub fn part_one(input: &str) -> Option<usize> {
 }
 
 pub fn part_two(input: &str) -> Option<usize> {
-    None
+    let result = input
+        .trim()
+        .lines()
+        .map(|l| {
+            let l = unfold_line(l);
+            let (pattern, gear_lengths) = parse_line(&l);
+            let mut cache = HashMap::new();
+            recurse(pattern, &gear_lengths, &mut cache)
+        })
+        .sum();
+
+    Some(result)
 }
 
 #[cfg(test)]
