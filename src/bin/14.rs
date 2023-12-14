@@ -91,17 +91,10 @@ fn move_rocks_east(grid: &mut [Vec<char>]) {
 }
 
 fn boulder_load(grid: &[Vec<char>]) -> usize {
-    let mut load = 0;
-
-    for (i, row) in grid.iter().enumerate() {
-        for col in row.iter() {
-            if *col == 'O' {
-                load += grid.len() - i;
-            }
-        }
-    }
-
-    load
+    grid.iter()
+        .enumerate()
+        .map(|(i, row)| row.iter().filter(|&&c| c == 'O').count() * (grid.len() - i))
+        .sum()
 }
 
 fn print_grid(grid: &[Vec<char>]) {
