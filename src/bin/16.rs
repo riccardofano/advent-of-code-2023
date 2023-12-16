@@ -1,5 +1,7 @@
 use std::collections::{HashSet, VecDeque};
 
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
+
 advent_of_code::solution!(16);
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
@@ -152,7 +154,7 @@ pub fn part_two(input: &str) -> Option<usize> {
     }
 
     starts
-        .into_iter()
+        .into_par_iter()
         .map(|beam| get_energized_cell_count(beam, &grid))
         .max()
 }
