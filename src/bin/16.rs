@@ -1,6 +1,7 @@
-use std::collections::{HashSet, VecDeque};
+use std::collections::VecDeque;
 
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use rustc_hash::FxHashSet;
 
 advent_of_code::solution!(16);
 
@@ -86,8 +87,8 @@ fn get_energized_cell_count(beam: Beam, grid: &[&[u8]]) -> usize {
     let mut beams: VecDeque<Beam> = VecDeque::new();
     beams.push_back(beam);
 
-    let mut energized_cells: HashSet<Position> = HashSet::new();
-    let mut seen: HashSet<Beam> = HashSet::new();
+    let mut energized_cells: FxHashSet<Position> = FxHashSet::default();
+    let mut seen: FxHashSet<Beam> = FxHashSet::default();
 
     while let Some(mut beam) = beams.pop_front() {
         loop {
