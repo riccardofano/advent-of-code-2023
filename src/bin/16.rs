@@ -103,10 +103,9 @@ fn get_energized_cell_count(beam: Beam, grid: &[&[u8]]) -> usize {
                 break;
             }
             energized_cells.insert(current_pos);
-
             seen.insert(beam);
 
-            if let Some((beam1, beam2)) = beam.next(&grid) {
+            if let Some((beam1, beam2)) = beam.next(grid) {
                 beams.push_back(beam1);
                 beams.push_back(beam2);
                 break;
@@ -139,7 +138,9 @@ pub fn part_two(input: &str) -> Option<usize> {
 
     let rows = grid.len();
     let cols = grid[0].len();
+
     let mut starts = Vec::with_capacity((rows * 2) + (cols * 2));
+
     for y in 0..rows {
         starts.push(Beam::new((y as isize, 0), Direction::Right));
         starts.push(Beam::new((y as isize, cols as isize - 1), Direction::Left));
