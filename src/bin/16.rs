@@ -80,15 +80,9 @@ impl Beam {
     }
 }
 
-pub fn part_one(input: &str) -> Option<usize> {
-    let grid = input
-        .trim()
-        .lines()
-        .map(|l| l.as_bytes())
-        .collect::<Vec<_>>();
-
+fn get_energized_cell_count(beam: Beam, grid: &[&[u8]]) -> usize {
     let mut beams: VecDeque<Beam> = VecDeque::new();
-    beams.push_back(Beam::new((0, 0), Direction::Right));
+    beams.push_back(beam);
 
     let mut energized_cells: HashSet<Position> = HashSet::new();
     let mut seen: HashSet<Beam> = HashSet::new();
@@ -101,7 +95,6 @@ pub fn part_one(input: &str) -> Option<usize> {
                 break;
             }
 
-            println!("{current_pos:?} going {:?}", beam.direction);
             if current_pos.0 < 0
                 || current_pos.0 >= grid.len() as isize
                 || current_pos.1 < 0
@@ -109,7 +102,6 @@ pub fn part_one(input: &str) -> Option<usize> {
             {
                 break;
             }
-            println!("added");
             energized_cells.insert(current_pos);
 
             seen.insert(beam);
@@ -122,11 +114,46 @@ pub fn part_one(input: &str) -> Option<usize> {
         }
     }
 
-    Some(energized_cells.len())
+    energized_cells.len()
+}
+
+pub fn part_one(input: &str) -> Option<usize> {
+    let grid = input
+        .trim()
+        .lines()
+        .map(|l| l.as_bytes())
+        .collect::<Vec<_>>();
+
+    Some(get_energized_cell_count(
+        Beam::new((0, 0), Direction::Right),
+        &grid,
+    ))
 }
 
 pub fn part_two(input: &str) -> Option<usize> {
-    None
+    let grid = input
+        .trim()
+        .lines()
+        .map(|l| l.as_bytes())
+        .collect::<Vec<_>>();
+
+    let rows = grid.len();
+    let cols = grid[0].len();
+    let mut starts = Vec::with_capacity((rows * 2) + (cols * 2));
+    for y in 0..rows {
+        starts.push(Beam::new((y as isize, 0), Direction::Right));
+        starts.push(Beam::new((y as isize, cols as isize - 1), Direction::Left));
+    }
+
+    for x in 0..cols {
+        starts.push(Beam::new((0, x as isize), Direction::Down));
+        starts.push(Beam::new((rows as isize - 1, x as isize), Direction::Up));
+    }
+
+    starts
+        .into_iter()
+        .map(|beam| get_energized_cell_count(beam, &grid))
+        .max()
 }
 
 #[cfg(test)]
@@ -142,6 +169,6 @@ mod tests {
     #[test]
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, None);
+        assert_eq!(result, Some(51));
     }
 }
