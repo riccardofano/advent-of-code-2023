@@ -97,7 +97,7 @@ fn boulder_load(grid: &[Vec<char>]) -> usize {
         .sum()
 }
 
-fn print_grid(grid: &[Vec<char>]) {
+fn _print_grid(grid: &[Vec<char>]) {
     for row in grid.iter() {
         for col in row.iter() {
             print!("{col}");
