@@ -26,7 +26,7 @@ impl PartialOrd for State {
     }
 }
 
-fn shortest_path(grid: &[&[u8]]) -> Option<usize> {
+fn shortest_path(grid: &[&[u8]], min_steps: usize, max_steps: usize) -> Option<usize> {
     let rows = grid.len();
     let cols = grid[0].len();
     let mut distances = FxHashMap::default();
@@ -63,15 +63,15 @@ fn shortest_path(grid: &[&[u8]]) -> Option<usize> {
             continue;
         }
 
-        for next_direction in DIRECTIONS {
-            let steps = if direction == next_direction {
+        'directions: for next_direction in DIRECTIONS {
+            let mut steps = if direction == next_direction {
                 steps_in_same_direction + 1
             } else {
                 1
             };
 
             // Can't go in the same direction more than 3 times
-            if steps > 3 {
+            if steps > max_steps {
                 continue;
             }
 
@@ -80,17 +80,29 @@ fn shortest_path(grid: &[&[u8]]) -> Option<usize> {
                 continue;
             }
 
-            let next_row = position.0.wrapping_add_signed(next_direction.0);
-            let next_col = position.1.wrapping_add_signed(next_direction.1);
+            let mut next_row = position.0;
+            let mut next_col = position.1;
+            let mut next_cost = cost;
 
-            // Don't exit the grid
-            if next_row >= rows || next_col >= cols {
-                continue;
+            loop {
+                next_row = next_row.wrapping_add_signed(next_direction.0);
+                next_col = next_col.wrapping_add_signed(next_direction.1);
+
+                // Don't exit the grid
+                if next_row >= rows || next_col >= cols {
+                    continue 'directions;
+                }
+
+                next_cost += (grid[next_row][next_col] - b'0') as usize;
+
+                if steps >= min_steps {
+                    break;
+                }
+
+                steps += 1;
             }
 
             let key = ((next_row, next_col), next_direction, steps);
-            let next_cost = cost + (grid[next_row][next_col] - b'0') as usize;
-
             if next_cost < *distances.get(&key).unwrap_or(&usize::MAX) {
                 heap.push(State {
                     cost: next_cost,
@@ -114,11 +126,17 @@ pub fn part_one(input: &str) -> Option<usize> {
         .map(|l| l.as_bytes())
         .collect::<Vec<&[u8]>>();
 
-    shortest_path(&grid)
+    shortest_path(&grid, 1, 3)
 }
 
-pub fn part_two(_input: &str) -> Option<usize> {
-    None
+pub fn part_two(input: &str) -> Option<usize> {
+    let grid = input
+        .trim()
+        .lines()
+        .map(|l| l.as_bytes())
+        .collect::<Vec<&[u8]>>();
+
+    shortest_path(&grid, 4, 10)
 }
 
 #[cfg(test)]
@@ -134,6 +152,14 @@ mod tests {
     #[test]
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, None);
+        assert_eq!(result, Some(94));
+    }
+
+    #[test]
+    fn test_part_two_two() {
+        let result = part_two(&advent_of_code::template::read_file_part(
+            "examples", DAY, 2,
+        ));
+        assert_eq!(result, Some(71));
     }
 }
