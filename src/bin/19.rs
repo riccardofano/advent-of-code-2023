@@ -1,4 +1,7 @@
-use std::{collections::HashMap, str::FromStr, thread::current};
+use std::{
+    collections::{HashMap, VecDeque},
+    str::FromStr,
+};
 
 advent_of_code::solution!(19);
 
@@ -26,17 +29,19 @@ impl FromStr for Part {
     }
 }
 
+#[derive(Debug)]
 struct Rule<'a> {
     condition: (usize, char, usize),
     then: &'a str,
 }
 
+#[derive(Debug)]
 struct Workflow<'a> {
     rules: Vec<Rule<'a>>,
     otherwise: &'a str,
 }
 
-fn parse_workflow<'a>(value: &'a str) -> (&'a str, Workflow<'a>) {
+fn parse_workflow(value: &str) -> (&str, Workflow<'_>) {
     let (label, rest) = value.split_once('{').unwrap();
     let mut rules = rest
         .strip_suffix('}')
@@ -69,6 +74,50 @@ fn parse_workflow<'a>(value: &'a str) -> (&'a str, Workflow<'a>) {
         .collect::<Vec<_>>();
 
     (label, Workflow { rules, otherwise })
+}
+
+fn count_accepted(workflows: &HashMap<&str, Workflow>) -> usize {
+    let max_ranges = [(1, 4000), (1, 4000), (1, 4000), (1, 4000)];
+    let mut queue = VecDeque::new();
+    queue.push_back(("in", max_ranges));
+
+    let mut accepted = 0;
+
+    while let Some((label, mut ranges)) = queue.pop_front() {
+        if label == "A" {
+            let score = ranges
+                .into_iter()
+                .fold(1, |acc, range| acc * (range.1 - range.0 + 1));
+            accepted += score;
+            continue;
+        }
+        if label == "R" {
+            continue;
+        }
+
+        let workflow = workflows.get(label).unwrap();
+        for Rule { condition, then } in &workflow.rules {
+            let (var, op, num) = *condition;
+            let mut new_ranges = ranges;
+
+            match op {
+                '>' => {
+                    new_ranges[var].0 = num + 1;
+                    ranges[var].1 = num;
+                }
+                '<' => {
+                    new_ranges[var].1 = num - 1;
+                    ranges[var].0 = num;
+                }
+                other => unreachable!("unknown op: {other:?}"),
+            }
+            queue.push_back((then, new_ranges))
+        }
+
+        queue.push_back((workflow.otherwise, ranges));
+    }
+
+    accepted
 }
 
 pub fn part_one(input: &str) -> Option<usize> {
@@ -126,7 +175,23 @@ pub fn part_one(input: &str) -> Option<usize> {
 }
 
 pub fn part_two(input: &str) -> Option<usize> {
-    None
+    let (workflows, _parts) = input.split_once("\n\n").unwrap();
+
+    let workflows = workflows
+        .lines()
+        .map(parse_workflow)
+        .collect::<HashMap<_, _>>();
+
+    // let mins = [1; 4];
+    // let maxs = [4000; 4];
+
+    // let mut count = 0;
+    // let possibilities = find_mins_maxs("in", &workflows, &mins, &maxs, &mut count);
+    // dbg!(count);
+
+    // Some(possibilities)
+
+    Some(count_accepted(&workflows))
 }
 
 #[cfg(test)]
@@ -142,6 +207,6 @@ mod tests {
     #[test]
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, None);
+        assert_eq!(result, Some(167409079868000));
     }
 }
