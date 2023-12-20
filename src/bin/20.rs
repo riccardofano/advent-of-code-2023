@@ -1,7 +1,5 @@
 use std::collections::{HashMap, VecDeque};
 
-use advent_of_code::template::readme_benchmarks::update;
-
 advent_of_code::solution!(20);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -13,7 +11,7 @@ enum Pulse {
 #[derive(Debug, Clone, PartialEq)]
 enum NodeKind {
     FlipFlop(bool),
-    Conjunction,
+    Conjunction(bool),
     Broadcast,
 }
 
@@ -32,12 +30,15 @@ impl<'a> Node<'a> {
 
         let (name, kind) = match info.as_bytes().first().unwrap() {
             b'%' => (info.strip_prefix('%').unwrap(), NodeKind::FlipFlop(false)),
-            b'&' => (info.strip_prefix('&').unwrap(), NodeKind::Conjunction),
+            b'&' => (
+                info.strip_prefix('&').unwrap(),
+                NodeKind::Conjunction(false),
+            ),
             b'b' => (info, NodeKind::Broadcast),
             _ => unreachable!(),
         };
 
-        let inputs = if kind == NodeKind::Conjunction {
+        let inputs = if matches!(kind, NodeKind::Conjunction(_)) {
             Some(HashMap::new())
         } else {
             None
@@ -68,7 +69,7 @@ impl<'a> Node<'a> {
                     None
                 }
             }
-            NodeKind::Conjunction => {
+            NodeKind::Conjunction(_) => {
                 let Some(ref mut inputs) = self.inputs else {
                     unreachable!();
                 };
@@ -77,6 +78,7 @@ impl<'a> Node<'a> {
                 if inputs.values().all(|&p| p == Pulse::High) {
                     Some(Pulse::Low)
                 } else {
+                    self.kind = NodeKind::Conjunction(true);
                     Some(Pulse::High)
                 }
             }
@@ -101,7 +103,7 @@ pub fn part_one(input: &str) -> Option<usize> {
 
     let conjunction_nodes = nodes
         .iter()
-        .filter(|(_key, node)| matches!(node.kind, NodeKind::Conjunction))
+        .filter(|(_key, node)| matches!(node.kind, NodeKind::Conjunction(_)))
         .map(|(&key, _)| key.clone())
         .collect::<Vec<_>>();
 
@@ -145,6 +147,71 @@ pub fn part_one(input: &str) -> Option<usize> {
 }
 
 pub fn part_two(input: &str) -> Option<usize> {
+    let mut nodes = input
+        .trim()
+        .lines()
+        .map(Node::parse_line)
+        .map(|node| (node.name, node))
+        .collect::<HashMap<_, _>>();
+
+    let conjunction_nodes = nodes
+        .iter()
+        .filter(|(_key, node)| matches!(node.kind, NodeKind::Conjunction(_)))
+        .map(|(&key, _)| key.clone())
+        .collect::<Vec<_>>();
+
+    let rx_sender = nodes
+        .iter()
+        .find(|(_, node)| node.destinations.contains(&"rx"))
+        .unwrap()
+        .0;
+    let rx_inputs = nodes
+        .iter()
+        .filter(|(_, node)| node.destinations.contains(rx_sender))
+        .map(|(key, _)| *key)
+        .collect::<Vec<_>>();
+
+    for conjunction_node in conjunction_nodes.iter() {
+        let mut inputs = HashMap::new();
+        for (name, node) in &nodes {
+            if node.destinations.contains(conjunction_node) {
+                inputs.insert(*name, Pulse::Low);
+            }
+        }
+
+        let n = nodes.get_mut(conjunction_node).unwrap();
+        n.inputs = Some(inputs);
+    }
+
+    let mut trigger_presses = HashMap::new();
+
+    let mut queue: VecDeque<(&str, &str, Pulse)> = VecDeque::new();
+    for i in 1.. {
+        queue.push_back(("button", "broadcaster", Pulse::Low));
+
+        while let Some((sender, label, pulse)) = queue.pop_front() {
+            if label == "output" {
+                continue;
+            }
+
+            let Some(node) = nodes.get_mut(label) else {
+                continue;
+            };
+            node.process(sender, pulse, &mut queue);
+
+            if node.kind == NodeKind::Conjunction(true)
+                && rx_inputs.contains(&node.name)
+                && trigger_presses.get(node.name).is_none()
+            {
+                trigger_presses.insert(node.name, i);
+            }
+
+            if trigger_presses.len() == rx_inputs.len() {
+                return Some(trigger_presses.values().product::<usize>());
+            }
+        }
+    }
+
     None
 }
 
