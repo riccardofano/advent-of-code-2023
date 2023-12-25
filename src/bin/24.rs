@@ -4,11 +4,8 @@ advent_of_code::solution!(24);
 struct Hailstone {
     x: f64,
     y: f64,
-    z: f64,
     vx: f64,
     vy: f64,
-    vz: f64,
-    m: f64,
 }
 
 impl Hailstone {
@@ -27,11 +24,8 @@ impl Hailstone {
         Self {
             x: positions[0],
             y: positions[1],
-            z: positions[2],
             vx: velocities[0],
             vy: velocities[1],
-            vz: velocities[2],
-            m: velocities[1] / velocities[0],
         }
     }
 
@@ -87,7 +81,8 @@ pub fn part_one(input: &str) -> Option<usize> {
     solve(input, 200000000000000.0, 400000000000000.0)
 }
 
-pub fn part_two(input: &str) -> Option<usize> {
+/// Solved using Z3 and python.
+pub fn part_two(_input: &str) -> Option<usize> {
     None
 }
 
